@@ -64,6 +64,19 @@ Enable **lateral control** for Subaru Outback 2023 (LKAS_ANGLE, Harness D) on **
 - [ ] No immediate EPS fault  
 - [ ] Cancel / override works  
 
+## Justin alignment (outback-23 behavior)
+
+To reduce false **Cruise Fault** disengages (as seen on stock-long angle cars):
+
+| Item | Behavior (match justin) |
+|------|-------------------------|
+| `ES_Distance.Cruise_Fault` | **Not** mapped to `accFaulted` on LKAS_ANGLE |
+| Cruise enabled | `ES_Status.Cruise_Activated` |
+| Steering angle | `Steering_Torque.Steering_Angle` |
+| Angle rate limit | ~1°/step all speeds |
+
+Still experimental. EyeSight may still set the bit on the bus; OP no longer hard-faults on it for angle cars.
+
 ## Safety note
 
 Experimental. Not upstream-ready. Public-road “finished product” use is not appropriate until validated. Always ready to take over.
