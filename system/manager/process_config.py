@@ -155,6 +155,10 @@ procs = [
   PythonProcess("webjoystick", "tools.bodyteleop.web", notcar),
   PythonProcess("joystick", "tools.joystick.joystick_control", and_(joystick, iscar)),
 
+  # Outback 2023 / C3: RAM ring-buffer CAN capture around faults (no laptop needed).
+  # Writes /tmp/can_faults then copies to /data/can_faults for later pull.
+  PythonProcess("can_fault_ringlog", "selfdrive.debug.can_fault_ringlog", only_onroad),
+
   # sunnylink <3
   DaemonProcess("manage_sunnylinkd", "sunnypilot.sunnylink.athena.manage_sunnylinkd", "SunnylinkdPid"),
   PythonProcess("sunnylink_registration_manager", "sunnypilot.sunnylink.registration_manager", sunnylink_need_register_shim),

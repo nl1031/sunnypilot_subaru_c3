@@ -142,6 +142,9 @@ class SelfdriveD(CruiseHelper):
     if HARDWARE.get_device_type() == 'tici' and nvme_expected:
       self.ignored_processes = {'loggerd', }
     self.ignored_processes.update({'mapd'})
+    # Diagnostic CAN ring logger must never soft-disable / flash "Process Not Running"
+    # (UI shows process name e.g. can_fault_ringlog — looks like a "can log" error).
+    self.ignored_processes.add('can_fault_ringlog')
 
     # Determine startup event
     is_remote = build_metadata.openpilot.comma_remote or build_metadata.openpilot.sunnypilot_remote
