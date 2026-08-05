@@ -313,6 +313,12 @@ class Updater:
     for alert in ("Offroad_UpdateFailed", "Offroad_ConnectivityNeeded", "Offroad_ConnectivityNeededPrompt"):
       set_offroad_alert(alert, False)
 
+    # Connectivity / "must check for updates or OP won't start" nag disabled on this
+    # fork. Stock openpilot forces Offroad_ConnectivityNeeded after days offline and
+    # hardwared then blocks onroad until the user taps Snooze — not wanted for a
+    # manually installed Outback 2023 / C3 port.
+    #
+    # Optionally still surface pure download failures when internet is present:
     dt_uptime_onroad = (self.params.get("UptimeOnroad", return_default=True) - last_uptime_onroad) / (60*60)
     dt_route_count = self.params.get("RouteCount", return_default=True) - last_route_count
     build_metadata = get_build_metadata()
@@ -322,12 +328,7 @@ class Updater:
       else:
         extra_text = exception
       set_offroad_alert("Offroad_UpdateFailed", True, extra_text=extra_text)
-    elif failed_count > 0:
-      if dt_uptime_onroad > HOURS_NO_CONNECTIVITY_MAX and dt_route_count > ROUTES_NO_CONNECTIVITY_MAX:
-        set_offroad_alert("Offroad_ConnectivityNeeded", True)
-      elif dt_uptime_onroad > HOURS_NO_CONNECTIVITY_PROMPT and dt_route_count > ROUTES_NO_CONNECTIVITY_PROMPT:
-        remaining = max(HOURS_NO_CONNECTIVITY_MAX - dt_uptime_onroad, 1)
-        set_offroad_alert("Offroad_ConnectivityNeededPrompt", True, extra_text=f"{remaining} hour{'' if remaining == 1 else 's'}.")
+    # elif failed_count > 0: ConnectivityNeeded / Prompt — intentionally not set
 
   def check_for_update(self) -> None:
     cloudlog.info("checking for updates")

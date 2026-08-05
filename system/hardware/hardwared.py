@@ -304,7 +304,11 @@ def hardware_thread(end_event, hw_queue) -> None:
 
     # **** starting logic ****
 
-    startup_conditions["up_to_date"] = params.get("Offroad_ConnectivityNeeded") is None or params.get_bool("DisableUpdates") or params.get_bool("SnoozeUpdate")
+    # Never block going onroad for "connect to check for updates".
+    # Experimental/local forks (Outback 2023 angle on C3) often have no update
+    # channel; stock Offroad_ConnectivityNeeded would force "Snooze Update" every
+    # few days. DisableUpdates / SnoozeUpdate still respected for completeness.
+    startup_conditions["up_to_date"] = True
     startup_conditions["no_excessive_actuation"] = params.get("Offroad_ExcessiveActuation") is None
     startup_conditions["not_uninstalling"] = not params.get_bool("DoUninstall")
     startup_conditions["accepted_terms"] = params.get("HasAcceptedTerms") == terms_version

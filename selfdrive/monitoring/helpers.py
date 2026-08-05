@@ -328,6 +328,22 @@ class DriverMonitoring:
       self._reset_awareness()
       return
 
+    # --- Dark cabin / non-IR driver cam (C3) ---
+    # Stock treats "no face" as passive unresponsive and counts down to
+    # "Touch Steering Wheel: No Face Detected" → take-over / exit OP. Without an
+    # IR cabin camera, night driving with no cabin light never sees a face, so
+    # that path is pure false positive.
+    # Policy: only judge distraction when face is *reliably* visible; otherwise
+    # recover awareness and raise no DM alerts.
+    face_reliable = self.face_detected and self.pose.low_std and not self.is_model_uncertain
+    if not face_reliable:
+      # gently recover so a previous orange state does not stay latched in the dark
+      self.awareness = min(1.0, self.awareness + max(self.step_change, self.settings._DT_DMON / 5.0))
+      self.awareness_active = max(self.awareness_active, self.awareness)
+      self.awareness_passive = max(self.awareness_passive, self.awareness)
+      self.hi_stds = 0
+      return
+
     driver_attentive = self.driver_distraction_filter.x < 0.37
     awareness_prev = self.awareness
 
@@ -350,10 +366,11 @@ class DriverMonitoring:
     always_on_red_exemption = always_on_valid and not op_engaged and _reaching_terminal
     always_on_lowspeed_exemption = always_on_valid and not op_engaged and car_speed < self.settings._ALWAYS_ON_ALERT_MIN_SPEED
 
+    # Only count *confirmed* distraction while face is reliable (already gated above).
+    # Do NOT use stock "maybe_distracted = no face / hi_std" countdown.
     certainly_distracted = self.driver_distraction_filter.x > 0.63 and self.driver_distracted and self.face_detected
-    maybe_distracted = self.hi_stds > self.settings._HI_STD_FALLBACK_TIME or not self.face_detected
 
-    if certainly_distracted or maybe_distracted:
+    if certainly_distracted:
       # should always be counting if distracted unless at standstill (lowspeed for always-on) and reaching orange
       # also will not be reaching 0 if DM is active when not engaged
       if not (standstill_orange_exemption or always_on_red_exemption or (always_on_lowspeed_exemption and _reaching_audible)):

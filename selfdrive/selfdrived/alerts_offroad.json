@@ -4,13 +4,14 @@
     "severity": 0
   },
   "Offroad_ConnectivityNeededPrompt": {
-    "text": "Immediately connect to the internet to check for updates. If you do not connect to the internet, sunnypilot won't engage in %1",
+    "text": "",
     "severity": 0,
-    "_comment": "Set extra field to number of days"
+    "_comment": "Disabled on this fork (no force-update / snooze nag)."
   },
   "Offroad_ConnectivityNeeded": {
-    "text": "Connect to internet to check for updates. sunnypilot won't automatically start until it connects to internet to check for updates.",
-    "severity": 1
+    "text": "",
+    "severity": 0,
+    "_comment": "Disabled on this fork — hardwared does not block onroad for updates."
   },
   "Offroad_UpdateFailed": {
     "text": "Unable to download updates\n%1",

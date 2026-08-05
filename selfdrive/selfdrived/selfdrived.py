@@ -415,16 +415,24 @@ class SelfdriveD(CruiseHelper):
         self.events.add(EventName.steerSaturated)
 
     # Check for FCW
-    stock_long_is_braking = self.enabled and not self.CP.openpilotLongitudinalControl and CS.aEgo < -1.25
-    model_fcw = self.sm['modelV2'].meta.hardBrakePredicted and not CS.brakePressed and not stock_long_is_braking
-    planner_fcw = self.sm['longitudinalPlan'].fcw and self.enabled
+    # Stock long (EyeSight ACC): car owns following/braking/FCW/AEB. Model
+    # hardBrakePredicted often trips after a few seconds of closing gap while
+    # stock gently decelerates (aEgo commonly milder than -1.25 m/s²), producing
+    # false "BRAKE! Risk of Collision" on highway. Only run OP FCW with OP long.
+    if self.CP.openpilotLongitudinalControl:
+      model_fcw = self.sm['modelV2'].meta.hardBrakePredicted and not CS.brakePressed
+      planner_fcw = self.sm['longitudinalPlan'].fcw and self.enabled
+    else:
+      model_fcw = False
+      planner_fcw = False
     if (planner_fcw or model_fcw) and not self.CP.notCar:
       self.events.add(EventName.fcw)
 
-    # GPS checks
+    # GPS checks — suppressed on this fork/device (C3 GPS unreliable).
+    # Stock openpilot raises EventName.noGps ("Poor GPS reception") after ~1.5 km
+    # without a fresh GPS fix. That alert is noise here and is not used for control.
+    # (EventName.noGps also has no UI entries in events.py; keep generation off.)
     gps_ok = self.sm.recv_frame[self.gps_location_service] > 0 and (self.sm.frame - self.sm.recv_frame[self.gps_location_service]) * DT_CTRL < 2.0
-    if not gps_ok and self.sm['livePose'].inputsOK and (self.distance_traveled > 1500):
-      self.events.add(EventName.noGps)
     if gps_ok:
       self.distance_traveled = 0
     self.distance_traveled += abs(CS.vEgo) * DT_CTRL

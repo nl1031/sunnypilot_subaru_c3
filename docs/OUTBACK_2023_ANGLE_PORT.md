@@ -64,18 +64,72 @@ Enable **lateral control** for Subaru Outback 2023 (LKAS_ANGLE, Harness D) on **
 - [ ] No immediate EPS fault  
 - [ ] Cancel / override works  
 
-## Justin alignment (outback-23 behavior)
+## Justin / Jacob alignment
 
-To reduce false **Cruise Fault** disengages (as seen on stock-long angle cars):
+| Item | Behavior |
+|------|----------|
+| `ES_Distance.Cruise_Fault` | **Not** mapped to `accFaulted` on LKAS_ANGLE (justin) |
+| Cruise enabled | `ES_Brake.Cruise_Activated` (jacob + panda safety) |
+| Steering angle | **`Steering_2.Steering_Angle`** (jacob + panda `angle_meas` / 0x124 scale) |
+| Angle rate limit | ~1°/step all speeds (justin-style soft limit) |
+| Inactive 0x124 | Command = measured angle, `LKAS_Request=0`, rolling COUNTER |
+| `ES_LKAS_State` when not enabled | Pass through stock ACTIVE/Dash_State (do not force 0) |
 
-| Item | Behavior (match justin) |
-|------|-------------------------|
-| `ES_Distance.Cruise_Fault` | **Not** mapped to `accFaulted` on LKAS_ANGLE |
-| Cruise enabled | `ES_Status.Cruise_Activated` |
-| Steering angle | `Steering_Torque.Steering_Angle` |
-| Angle rate limit | ~1°/step all speeds |
+### Why C3-on caused EyeSight / LKAS Fault
 
-Still experimental. EyeSight may still set the bit on the bus; OP no longer hard-faults on it for angle cars.
+Harness D + panda `check_relay` **block stock** `ES_LKAS_ANGLE` (0x124). OP must replace it.
+If inactive angle was taken from `Steering_Torque` (different scale/source than safety's `Steering_2`), panda **drops** OP TX → EPS sees no valid angle stream → latched LKAS/EyeSight fault until key cycle. C3 off = pass-through stock = no fault.
+
+### Why light wheel input / random faults (vs justin outback-23)
+
+Justin-era panda (`safety_subaru.h` on outback-forester-22):
+
+| Item | justin | modern JacobW-style (was ours) |
+|------|--------|--------------------------------|
+| Angle meas | `Steering_Torque` × -0.0217 (deg) | `Steering_2` raw (0.01 deg) |
+| Rate limit | **1°/TX all speeds** | 5 → 0.8 → **0.15°/TX** with speed |
+| Cruise engage bit | `ES_Status` + `ES_STATUS` flag | `ES_Brake` |
+| LKAS_ANGLE param bit | `2` | `8` |
+
+Carcontroller uses ~1°/step (justin). If panda only allows 0.15°/TX, **TX is rejected** → missing 0x124 → EPS fault. Light hand torque without `steerOverride` (threshold 80) keeps `LKAS_Request=1` while angle fights → `Steer_Warning` / `Steer_Error`.
+
+**Mitigations (fault / hand-priority era):** safety rate **1°/TX all speeds**; hand-control in carcontroller.
+
+### Road-test: hand OK, slow re-engage, weak on curves (2026-08-05)
+
+Symptoms after hand-priority work:
+- Manual priority while engaged: **OK, no EPS fault**
+- Release wheel → OP resumes **too late**
+- Bends: OP under-steers / late; must intervene or leave lane
+
+Likely causes (code):
+1. `ANGLE_OVERRIDE_RELEASE_FRAMES=25` (~0.5 s) pure delay before re-engage
+2. Torque enter **25** + soft-yield at **3°** + residual torque **>12** → **false hand-control mid-curve** (road/EPS torque), drops `LKAS_Request`
+3. `steeringPressed` threshold **25** → controlsd also pauses lat on curves
+4. `steerActuatorDelay=0.1` a bit low for angle look-ahead
+
+**Tuning (opendbc only, no panda reflash required for this step):**
+| Param | Was | Now |
+|-------|-----|-----|
+| TORQUE_ON / OFF | 25 / 12 | **50 / 22** |
+| ERR_YIELD | 3° + tq>OFF | **8° + tq≥ON** |
+| RELEASE_FRAMES | 25 (~0.5s) | **8 (~0.16s)** |
+| steeringPressed | 25 | **50** |
+| steerActuatorDelay (Outback 2023) | 0.1 | **0.2** |
+
+If curves still lag with hands off and no false yield: next levers are mild rate raise (must match panda), `steerRatio`, live lateral delay.
+
+### Alerts: highway follow / curves
+
+| Symptom | Likely event | Mitigation on this fork |
+|---------|----------------|-------------------------|
+| Lead slows → OP "BRAKE!" after stock ACC decelerates | `EventName.fcw` from model `hardBrakePredicted` (stock long) | **Disable OP model/planner FCW when not OP-long** (`selfdrived.py`) |
+| Bad corner → "Take Control / Turn Exceeds Steering Limit" | `steerSaturated` | Higher angle sat threshold, honor rate-limit in sat timer, `steerLimitTimer=1.0` for LKAS_ANGLE |
+| EPS unhappy | `steerTempUnavailable` from `Steer_Warning` | Fix tracking / hand-control false yield (§ hand-priority) |
+
+**Must rebuild/flash panda** only after `subaru.h` safety change (not for carcontroller-only tuning).
+
+Still experimental.
 
 ## Safety note
 

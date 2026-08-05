@@ -596,6 +596,8 @@ EVENTS: dict[int, dict[str, Alert | AlertCallbackType]] = {
     ET.SOFT_DISABLE: soft_disable_alert("Sensor Data Invalid"),
   },
 
+  # Suppressed: device GPS often poor; do not show "Poor GPS reception" style alerts.
+  # selfdrived also does not raise this event on this fork.
   EventName.noGps: {
   },
 
