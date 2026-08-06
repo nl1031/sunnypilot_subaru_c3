@@ -35,14 +35,19 @@ Enable **lateral control** for Subaru Outback 2023 (LKAS_ANGLE, Harness D) on **
 
 ## Code changes (this branch)
 
+### Phase: pure JacobW port (no c3/justin enhancements)
+
+Aligned to `openpilot_jacobwaller` angle path. **Deferred** (re-add only after Jacob baseline is OK on car): hand/brake priority, 1°/TX rate, ignore `Cruise_Fault`, Outback delay/timer tuning.
+
 | File | Change |
 |------|--------|
-| `car/subaru/interface.py` | Unlock LKAS_ANGLE dashcam; set `SubaruSafetyFlags.LKAS_ANGLE` |
-| `car/subaru/carcontroller.py` | `handle_angle_lateral` → `ES_LKAS_ANGLE` |
-| `car/subaru/carstate.py` | `Steering_2` angle + `ES_Brake` cruise for LKAS_ANGLE |
-| `car/subaru/values.py` | `ANGLE_LIMITS`, `SubaruSafetyFlags.LKAS_ANGLE` |
-| `car/subaru/fingerprints.py` | Extra OUTBACK_2023 FW blobs |
-| `safety/modes/subaru.h` | TX/RX/checks for 0x124 angle mode |
+| `car/subaru/interface.py` | Jacob: `dashcamOnly` only when `is_release` for LKAS_ANGLE; `safetyParam \|= LKAS_ANGLE` |
+| `car/subaru/carcontroller.py` | Jacob: `handle_angle_lateral` + engage re-anchor → `ES_LKAS_ANGLE` (no hand priority) |
+| `car/subaru/carstate.py` | Jacob: `Steering_2`, `ES_Brake` cruise, map `Cruise_Fault` → `accFaulted` |
+| `car/subaru/values.py` | Jacob `ANGLE_LIMITS` 5 / 0.8 / 0.15 °/step by speed |
+| `car/subaru/subarucan.py` | Jacob: disabled → `LKAS_Dash_State=0` |
+| `car/subaru/test_carcontroller.py` | Jacob re-anchor unit test (Outback 2023 / CP_SP) |
+| `safety/modes/subaru.h` | Jacob angle rate table + 0x124 path (LKAS_ANGLE param outside ALLOW_DEBUG for this fork) |
 
 ## Device install (C3)
 
