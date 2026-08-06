@@ -1,141 +1,187 @@
-# Outback 2023 Angle Port (C3 / master-tici)
+# Outback 2023 Angle Port (C3 / tici)
 
 ## Goal
 
-Enable **lateral control** for Subaru Outback 2023 (LKAS_ANGLE, Harness D) on **comma three**, based on sunnypilot `master-tici`.
+Enable **lateral control** for **Subaru Outback 2023** (`LKAS_ANGLE`, **Harness D**) on **comma three (C3 / tici)**, based on sunnypilot `master-tici`, with angle path aligned to **JacobW** (`openpilot_jacobwaller`).
 
-## Base
+## Status (2026-08-06)
 
 | Item | Value |
 |------|--------|
-| Tree | `/opt/develop/c3/sunnypilot_tici` |
-| Upstream | `master-tici` @ `737a6c423` |
-| Branch | `outback-2023-angle` |
-| AGNOS | 12.8 (tici) |
+| **Baseline on device / GitHub** | **Pure JacobW angle** (most stable road result so far) |
+| Parent branch | `outback-2023-angle-tici` @ `21904c733` |
+| opendbc branch | `outback-2023-angle-tici` @ `0b4c207` |
+| GitHub | https://github.com/nl1031/sunnypilot_subaru_c3/tree/outback-2023-angle-tici |
+| opendbc | https://github.com/nl1031/opendbc/tree/outback-2023-angle-tici |
+| AGNOS | **12.6** (match office C3; see `launch_env.sh`) |
+| Tree (dev machine) | `/opt/develop/c3/sunnypilot_subaru_c3` |
 
-## References
+**Road feedback:** pure Jacob port drove on the order of **~5 km with only ~2× “LKAS Fault: Restart the Car”**. Later “mitigations” (1°/TX + hand priority, then tighter hand/rate gates) **felt worse** and failed sooner (routes `2a`–`2d`). Those experiments remain in git history; **HEAD is rolled back to pure Jacob**.
 
-| Tree | Role |
-|------|------|
-| JacobW `openpilot_jacobwaller` | Angle TX, safety 0x124, carstate Steering_2 / ES_Brake |
-| openpilot `outback-23` | Historical proof of engage (old stack) |
+---
 
-## Audit (before port)
+## Base / references
 
-| Module | master-tici | Needed |
-|--------|-------------|--------|
-| Platform `OUTBACK_2023` + Harness D | Present | Keep |
-| `dashcamOnly` on LKAS_ANGLE | Locked (interface + `_get_params_sp`) | Unlock for experimental |
-| `steerControlType.angle` | Set | Keep |
-| `CarController` | Torque only | Angle path + `ES_LKAS_ANGLE` |
-| `create_steering_control_angle` | Exists unused | Use |
-| Safety `0x124` / `LKAS_ANGLE` param | Missing | Port from JacobW |
-| carstate angle / cruise | Steering_Torque / CruiseControl | Steering_2 / ES_Brake for LKAS_ANGLE |
-| Fingerprints | Partial OUTBACK_2023 | Extend as needed |
-
-## Code changes (this branch)
-
-### Phase: pure JacobW port (no c3/justin enhancements)
-
-Aligned to `openpilot_jacobwaller` angle path. **Deferred** (re-add only after Jacob baseline is OK on car): hand/brake priority, 1°/TX rate, ignore `Cruise_Fault`, Outback delay/timer tuning.
-
-| File | Change |
+| Item | Value |
 |------|--------|
-| `car/subaru/interface.py` | Jacob: `dashcamOnly` only when `is_release` for LKAS_ANGLE; `safetyParam \|= LKAS_ANGLE` |
-| `car/subaru/carcontroller.py` | Jacob: `handle_angle_lateral` + engage re-anchor → `ES_LKAS_ANGLE` (no hand priority) |
-| `car/subaru/carstate.py` | Jacob: `Steering_2`, `ES_Brake` cruise, map `Cruise_Fault` → `accFaulted` |
-| `car/subaru/values.py` | Jacob `ANGLE_LIMITS` 5 / 0.8 / 0.15 °/step by speed |
-| `car/subaru/subarucan.py` | Jacob: disabled → `LKAS_Dash_State=0` |
-| `car/subaru/test_carcontroller.py` | Jacob re-anchor unit test (Outback 2023 / CP_SP) |
-| `safety/modes/subaru.h` | Jacob angle rate table + 0x124 path (LKAS_ANGLE param outside ALLOW_DEBUG for this fork) |
+| Upstream base | sunnypilot `master-tici` @ `737a6c423` |
+| JacobW | `/opt/develop/c3/openpilot_jacobwaller` — angle TX, safety 0x124, `Steering_2` / `ES_Brake`, engage re-anchor |
+| justin `outback-23` | Historical proof of engage (old stack); not current baseline |
+| Harness | **Subaru D** |
 
-## Device install (C3)
+---
 
-1. Ensure flash.comma.ai completed successfully  
-2. **Do not** install sunnypilot/`openpilot` **master**  
-3. Baseline check (optional): install `staging-tici` / `master-tici` first  
-4. Deploy this branch:
-   - SSH: rsync/git clone this tree to `/data/openpilot` on device, or  
-   - Push to GitHub and use `installer.comma.ai/<user>/outback-2023-angle`  
-5. Hardware: **Harness D**, Outback 2023 EyeSight  
-6. If fingerprint fails: force fingerprint / collect FW via SSH logs  
-
-## Validation checklist
-
-- [ ] Boots on C3 without Unsupported firmware  
-- [ ] Car recognized as Outback 2023 (or forced)  
-- [ ] Not dashcamOnly (`CarParams` / UI)  
-- [ ] Engage ACC → lateral engages; wheel follows  
-- [ ] No immediate EPS fault  
-- [ ] Cancel / override works  
-
-## Justin / Jacob alignment
+## Current code behavior (pure Jacob baseline)
 
 | Item | Behavior |
 |------|----------|
-| `ES_Distance.Cruise_Fault` | **Not** mapped to `accFaulted` on LKAS_ANGLE (justin) |
-| Cruise enabled | `ES_Brake.Cruise_Activated` (jacob + panda safety) |
-| Steering angle | **`Steering_2.Steering_Angle`** (jacob + panda `angle_meas` / 0x124 scale) |
-| Angle rate limit | ~1°/step all speeds (justin-style soft limit) |
-| Inactive 0x124 | Command = measured angle, `LKAS_Request=0`, rolling COUNTER |
-| `ES_LKAS_State` when not enabled | Pass through stock ACTIVE/Dash_State (do not force 0) |
+| Unlock control | `dashcamOnly` for `LKAS_ANGLE` only when `is_release` (non-release branch can control) |
+| `safetyParam` | `GEN2 \| LKAS_ANGLE` (e.g. **9**) |
+| `steerControlType` | **angle** |
+| Steering measure | **`Steering_2.Steering_Angle`** (matches panda `angle_meas`) |
+| Cruise enabled | **`ES_Brake.Cruise_Activated`** (matches panda PCM check) |
+| Lateral TX | **`ES_LKAS_ANGLE` (0x124)** on bus 0 |
+| Engage | **Re-anchor** `apply_angle_last` to live measured angle on rising `latActive` |
+| Inactive / not lat active | Command angle = measured, `LKAS_Request=0` |
+| Angle rate (controller + panda) | Jacob table **5 / 0.8 / 0.15** ° per TX by speed |
+| Hand / brake priority | **None** (stock OP `steeringPressed` threshold ~80) |
+| `ES_Distance.Cruise_Fault` | Mapped to **`accFaulted`** when not OP-long (Jacob) |
+| `ES_LKAS_State` when disabled | Jacob: **`LKAS_Dash_State=0`** |
+| LKAS_ANGLE safety init | Enabled **outside** `ALLOW_DEBUG` on this fork (so non-debug panda builds still accept param bit 8) |
 
-### Why C3-on caused EyeSight / LKAS Fault
+### Key files (`opendbc_repo`)
 
-Harness D + panda `check_relay` **block stock** `ES_LKAS_ANGLE` (0x124). OP must replace it.
-If inactive angle was taken from `Steering_Torque` (different scale/source than safety's `Steering_2`), panda **drops** OP TX → EPS sees no valid angle stream → latched LKAS/EyeSight fault until key cycle. C3 off = pass-through stock = no fault.
+| File | Role |
+|------|------|
+| `opendbc/car/subaru/interface.py` | dashcam / `LKAS_ANGLE` safety param |
+| `opendbc/car/subaru/carcontroller.py` | `handle_angle_lateral` + re-anchor |
+| `opendbc/car/subaru/carstate.py` | `Steering_2`, `ES_Brake`, Cruise_Fault |
+| `opendbc/car/subaru/values.py` | `ANGLE_LIMITS`, platforms |
+| `opendbc/car/subaru/subarucan.py` | pack 0x124 / HUD messages |
+| `opendbc/car/subaru/test_carcontroller.py` | re-anchor unit test |
+| `opendbc/safety/modes/subaru.h` | 0x124 TX/RX, angle checks, rate table |
 
-### Why light wheel input / random faults (vs justin outback-23)
+---
 
-Justin-era panda (`safety_subaru.h` on outback-forester-22):
+## Road-test log (summary)
 
-| Item | justin | modern JacobW-style (was ours) |
-|------|--------|--------------------------------|
-| Angle meas | `Steering_Torque` × -0.0217 (deg) | `Steering_2` raw (0.01 deg) |
-| Rate limit | **1°/TX all speeds** | 5 → 0.8 → **0.15°/TX** with speed |
-| Cruise engage bit | `ES_Status` + `ES_STATUS` flag | `ES_Brake` |
-| LKAS_ANGLE param bit | `2` | `8` |
+### Pure Jacob (~5 km) — best so far
 
-Carcontroller uses ~1°/step (justin). If panda only allows 0.15°/TX, **TX is rejected** → missing 0x124 → EPS fault. Light hand torque without `steerOverride` (threshold 80) keeps `LKAS_Request=1` while angle fights → `Steer_Warning` / `Steer_Error`.
+- Lateral usable; **more stable** than pre-Jacob / experimental stacks.
+- **~2×** `TAKE CONTROL IMMEDIATELY` / **`LKAS Fault: Restart the Car`**.
+- Alert path: `Steer_Error_1` → `steerFaultPermanent` → `steerUnavailable`.
+- Key cycle clears EPS latch; **C3 need not reboot**.
 
-**Mitigations (fault / hand-priority era):** safety rate **1°/TX all speeds**; hand-control in carcontroller.
+### After “mitigations” (regressed) — routes `2a`–`2c` (clock OK, 2026-08-06)
 
-### Road-test: hand OK, slow re-engage, weak on curves (2026-08-05)
+| Change | Result |
+|--------|--------|
+| 1°/TX all speeds + hand priority (tq 45/20) | Faulted **quickly** at low speed (~25–30 km/h) |
+| Logs | High wheel rate / hand fight; still `Steer_Error_1` |
 
-Symptoms after hand-priority work:
-- Manual priority while engaged: **OK, no EPS fault**
-- Release wheel → OP resumes **too late**
-- Bends: OP under-steers / late; must intervene or leave lane
+### Tighter hand/rate gates — route `2d` (clock wrong / no hotspot)
 
-Likely causes (code):
-1. `ANGLE_OVERRIDE_RELEASE_FRAMES=25` (~0.5 s) pure delay before re-engage
-2. Torque enter **25** + soft-yield at **3°** + residual torque **>12** → **false hand-control mid-curve** (road/EPS torque), drops `LKAS_Request`
-3. `steeringPressed` threshold **25** → controlsd also pauses lat on curves
-4. `steerActuatorDelay=0.1` a bit low for angle look-ahead
+| Change | Result |
+|--------|--------|
+| tq ON 28, release ~0.5 s, rate hold/resume gates | **Worse**: many `steerOverride`, lat flaky |
+| Fault pattern | After hand whip, **cmd angle drifted from measured** (~7° error) then EPS latch even when tq≈0 |
 
-**Tuning (opendbc only, no panda reflash required for this step):**
-| Param | Was | Now |
-|-------|-----|-----|
-| TORQUE_ON / OFF | 25 / 12 | **50 / 22** |
-| ERR_YIELD | 3° + tq>OFF | **8° + tq≥ON** |
-| RELEASE_FRAMES | 25 (~0.5s) | **8 (~0.16s)** |
-| steeringPressed | 25 | **50** |
-| steerActuatorDelay (Outback 2023) | 0.1 | **0.2** |
+**Lesson:** on this car, **do not stack aggressive hand-priority + rate gates** without a strong “re-anchor + cmd≈meas before re-request” rule. Prefer **one change at a time** on top of pure Jacob.
 
-If curves still lag with hands off and no false yield: next levers are mild rate raise (must match panda), `steerRatio`, live lateral delay.
+### Other notes
 
-### Alerts: highway follow / curves
+- Harness D + panda `check_relay` **block stock 0x124** → OP must continuously send a valid substitute.
+- C3 **RTC is unreliable** (often stuck near 1970). Use **phone hotspot / office Wi‑Fi for NTP** before a drive so route mtimes are useful. Internal `logMonoTime` remains consistent within a drive either way.
+- Device was **UnregisteredDevice** in office tests; local rlog/qlog still written under `/data/media/0/realdata/`.
 
-| Symptom | Likely event | Mitigation on this fork |
-|---------|----------------|-------------------------|
-| Lead slows → OP "BRAKE!" after stock ACC decelerates | `EventName.fcw` from model `hardBrakePredicted` (stock long) | **Disable OP model/planner FCW when not OP-long** (`selfdrived.py`) |
-| Bad corner → "Take Control / Turn Exceeds Steering Limit" | `steerSaturated` | Higher angle sat threshold, honor rate-limit in sat timer, `steerLimitTimer=1.0` for LKAS_ANGLE |
-| EPS unhappy | `steerTempUnavailable` from `Steer_Warning` | Fix tracking / hand-control false yield (§ hand-priority) |
+---
 
-**Must rebuild/flash panda** only after `subaru.h` safety change (not for carcontroller-only tuning).
+## Experiments kept in git history (not on HEAD)
 
-Still experimental.
+| opendbc commit | Intent |
+|----------------|--------|
+| `d4288cd` | Pure Jacob port |
+| `830e4a7` | 1°/TX + hand priority 45 + ES_LKAS_State passthrough |
+| `7039c40` | Earlier yield 28 + rate-gated re-engage |
+| `0b4c207` | **Restore pure Jacob** (current) |
+
+Parent bumps: `91f7a9937` → … → `21904c733` (restore).
+
+---
+
+## Device install / update (C3)
+
+1. AGNOS **12.6** (or match `launch_env.sh` / device `/VERSION`).  
+2. **Do not** install generic sunnypilot/openpilot **master** (non-tici).  
+3. Deploy branch to `/data/openpilot` (rsync or clone + submodule):
+
+```bash
+# Example rsync from dev machine
+rsync -avz --exclude '.git/' --exclude '*/.git/' --exclude '__pycache__/' \
+  /opt/develop/c3/sunnypilot_subaru_c3/ comma:/data/openpilot/
+```
+
+4. Hardware: **Harness D**, Outback 2023 EyeSight.  
+5. After any change to **`subaru.h`**: rebuild and flash panda on device:
+
+```bash
+ssh comma 'source /usr/local/venv/bin/activate
+  export PYTHONPATH=/data/openpilot
+  cd /data/openpilot && python3 panda/board/flash.py && sudo reboot'
+```
+
+6. Fingerprint: force / extend FW if needed; confirm `SUBARU_OUTBACK_2023`, `dashcamOnly=False`, `safetyParam` includes LKAS_ANGLE (bit 8).  
+7. Prefer **non-release** install (`IsReleaseBranch=0`) so LKAS_ANGLE is not dashcam-only.
+
+### Pull on another PC
+
+```bash
+git clone --recurse-submodules -b outback-2023-angle-tici \
+  git@github.com:nl1031/sunnypilot_subaru_c3.git
+# or update existing:
+git pull origin outback-2023-angle-tici && git submodule update --init --recursive
+```
+
+Remote: keep **`origin`** → `nl1031/sunnypilot_subaru_c3`; optional **`upstream`** → sunnypilot/sunnypilot. Duplicate remotes with the same URL can be removed.
+
+### Clear device logs (before a clean test)
+
+```bash
+# On device (stop OP first if needed)
+find /data/media/0/realdata -mindepth 1 -maxdepth 1 ! -name crash -exec rm -rf {} +
+mkdir -p /data/media/0/realdata/boot /data/media/0/realdata/crash
+find /data/log -maxdepth 1 -name 'swaglog*' -delete
+```
+
+---
+
+## Validation checklist
+
+- [x] Boots on C3 (AGNOS 12.6) with this tree  
+- [x] Car recognized as Outback 2023; not dashcamOnly  
+- [x] ACC engage → lateral works (pure Jacob)  
+- [x] Occasional EPS LKAS fault still possible (~2 / 5 km observed)  
+- [ ] Long / multi-condition drive without latch  
+- [ ] Hand override without permanent fault (not solved on pure Jacob)  
+- [ ] Curve tracking / re-engage tuning (only after baseline stays Jacob)  
+
+---
+
+## Reading faults from C3
+
+```bash
+ssh comma 'ls -lt /data/media/0/realdata | head'
+# Parse with device venv:
+ssh comma 'source /usr/local/venv/bin/activate
+  export PYTHONPATH=/data/openpilot
+  # LogReader on .../qlog.zst or rlog.zst
+'
+```
+
+Useful signals: `carState.steerFaultPermanent`, `onroadEvents` → `steerUnavailable`, `selfdriveState.alertText2` = `LKAS Fault: Restart the Car`.
+
+---
 
 ## Safety note
 
-Experimental. Not upstream-ready. Public-road “finished product” use is not appropriate until validated. Always ready to take over.
+**Experimental.** Not upstream-ready. Not a finished product for public-road reliance. Always be ready to take over. Safety / panda changes require dual review before flash when possible.
