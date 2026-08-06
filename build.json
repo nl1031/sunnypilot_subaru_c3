@@ -1,0 +1,11 @@
+{
+  "channel": "outback-2023-angle-tici",
+  "openpilot": {
+    "version": "0.10.1",
+    "release_notes": "Version 0.10.1 (2025-09-08)\n========================\n* Record driving feedback using LKAS button\n* Honda City 2023 support thanks to drFritz!",
+    "git_commit": "6dc8b18d8f877de61cdf485eb809c2c69a689e81",
+    "git_origin": "https://github.com/nl1031/sunnypilot_subaru_c3",
+    "git_commit_date": "2026-08-06 16:08:40 +0800",
+    "build_style": "dev"
+  }
+}
