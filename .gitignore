@@ -110,3 +110,7 @@ Pipfile
 !.idea/customTargets.xml
 !.idea/tools/*
 !.run/*
+
+# Local development notes — do not publish
+docs/开发日志.md
+**/开发日志.md

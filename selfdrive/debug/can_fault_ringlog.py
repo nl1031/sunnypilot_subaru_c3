@@ -229,7 +229,8 @@ def main() -> None:
 
       for msg in messaging.drain_sock(sock_ss):
         ss = msg.selfdriveState
-        status = int(ss.alertStatus)
+        # pycapnp DynamicEnum is not int()-able; use .raw (same as UI alert_renderer)
+        status = int(ss.alertStatus.raw)
         text1 = str(ss.alertText1) if ss.alertText1 else ""
         text2 = str(ss.alertText2) if ss.alertText2 else ""
         atype = str(ss.alertType) if ss.alertType else ""
