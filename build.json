@@ -3,7 +3,7 @@
   "openpilot": {
     "version": "0.10.1",
     "release_notes": "Version 0.10.1 (2025-09-08)\n========================\n* Record driving feedback using LKAS button\n* Honda City 2023 support thanks to drFritz!",
-    "git_commit": "ffaf0f28307a7f70276cb44f2651074a5e51dc4d",
+    "git_commit": "2cad90203848c23d97b0c00e1bb06f5d0a201771",
     "git_origin": "https://github.com/nl1031/sunnypilot_subaru_c3",
     "git_commit_date": "2026-08-07 18:17:02 +0800",
     "build_style": "dev"
