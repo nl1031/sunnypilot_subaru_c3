@@ -5,11 +5,11 @@
 Enable **lateral control** for **Subaru Outback 2023** (`LKAS_ANGLE`, **Harness D**) on **comma three (C3 / tici)**, based on sunnypilot `master-tici`. CAN / safety design follows **JacobW** (`openpilot_jacobwaller`); fault-hardening and rate tuning come from on-road iteration (2026-08-04 … 2026-08-06).
 
 
-## Status (2026-08-07)
+## Status (2026-08-07 post route 3c)
 
 | Item | Value |
 |------|--------|
-| **Current tree (dev machine)** | Curve-authority stack — hard hand-yield, Request `0→1` first frame `cmd=meas`, angle rate **3.0 / 2.0 / 1.0** °/TX |
+| **Current tree (dev machine)** | Route-3c tune — `steeringPressed=55`, angle rate **3.5 / 2.2 / 1.0** °/TX, hard hand-yield, `0→1` `cmd=meas` |
 | Branch | `outback-2023-angle-tici` |
 | GitHub (last pushed baseline) | https://github.com/nl1031/sunnypilot_subaru_c3/tree/outback-2023-angle-tici |
 | opendbc | https://github.com/nl1031/opendbc/tree/outback-2023-angle-tici |
@@ -27,7 +27,8 @@ Enable **lateral control** for **Subaru Outback 2023** (`LKAS_ANGLE`, **Harness 
 | Route **37** (~12:40–47) | **No UI EPS/LKAS fault**; enable ~153 s; `sfp≈0` |
 | After 1°/TX flat + sticky yield | Stable but **slow / understeery** in curves |
 | 2.5 / 1.6 / 1.0 + looser yield | Still felt slow on turns |
-| **Current (3.0 / 2.0 / 1.0 + delay 0.18 + looser holdoff)** | Code ready; **must reflash panda** then road-test |
+| 3.0 / 2.0 / 1.0 + delay 0.18 | Route **3c**: no EPS; **26%** enable in `steerOverride`; low-speed \|des−meas\| lag |
+| **Current (pressed 55 + 3.5 / 2.2 / 1.0)** | Post-3c fix; **reflash panda** |
 
 ---
 
@@ -55,23 +56,24 @@ Enable **lateral control** for **Subaru Outback 2023** (`LKAS_ANGLE`, **Harness 
 | Engage | Re-anchor `apply_angle_last` to live measured angle; optional **hold-off** if \|angle\| large / not calm / hands fighting |
 | Inactive / not lat active | Command angle = measured, `LKAS_Request=0` |
 | Request **0→1** first frame | **`cmd = meas`** (Δangle ≈ 0 vs last TX), then rate-limit toward desired — fixes route-36 dropouts |
-| Angle rate (CC + panda) | **`[0, 5, 35] → [3.0, 2.0, 1.0]`** °/TX @ ~50 Hz — **must stay in sync** (`values.py` ↔ `subaru.h`, **3 breakpoints only**) |
+| Angle rate (CC + panda) | **`[0, 5, 35] → [3.5, 2.2, 1.0]`** °/TX @ ~50 Hz — **must stay in sync** (`values.py` ↔ `subaru.h`, **3 breakpoints only**) |
 | Hand yield | Hard only (no soft yield): torque ≥ **55** → `LKAS_Request=0`; resume ≤ **35** after min hold + calm frames |
 | Min yield / calm | **8** STEER_STEP frames (~0.16 s) + **4** calm (~0.08 s); large \|meas\| ≥22° uses **6** calm frames |
 | Soft yield (`\|des−meas\|` + residual torque) | **Off** — caused Request chatter (route 33) |
 | Resume \|des−meas\| gate | **Removed** — kept Request=0 too long then snapped (route 36) |
 | `Cruise_Fault` (stock long + LKAS_ANGLE) | **Non-critical** (`carFaultedNonCritical`), not `accFaulted` — avoids sticky “Cruise Fault: Restart” |
-| `steeringPressed` threshold (LKAS_ANGLE) | **40** |
+| `steeringPressed` threshold (LKAS_ANGLE) | **55** (aligned with HAND_YIELD; was 40 — route 3c false override) |
 | Outback 2023 delays | `steerActuatorDelay=0.18`, `steerLimitTimer=0.8` |
 | `ES_LKAS_State` when disabled | Jacob: **`LKAS_Dash_State=0`** |
 | LKAS_ANGLE safety init | Enabled **outside** `ALLOW_DEBUG` on this fork (non-debug panda still accepts param bit 8) |
 
-### Key parameters (2026-08-07)
+### Key parameters (2026-08-07 post route 3c)
 
 | Parameter | Value |
 |-----------|--------|
-| `ANGLE_LIMITS` | speeds `[0, 5, 35]` → rates `[3.0, 2.0, 1.0]` °/TX |
+| `ANGLE_LIMITS` | speeds `[0, 5, 35]` → rates `[3.5, 2.2, 1.0]` °/TX |
 | `LKAS_ANGLE_HAND_YIELD` / `HAND_RESUME` | **55 / 35** |
+| `steeringPressed` (LKAS_ANGLE) | **55** |
 | `LKAS_ANGLE_YIELD_MIN_FRAMES` | **8** (~0.16 s) |
 | `LKAS_ANGLE_RESUME_CALM_FRAMES` | **4** (~0.08 s) |
 | `LKAS_ANGLE_LARGE_ANGLE_DEG` / `CALM` | **22° / 6** (~0.12 s) |
@@ -87,7 +89,8 @@ Enable **lateral control** for **Subaru Outback 2023** (`LKAS_ANGLE`, **Harness 
 | Jacob baseline | 5 / 0.8 / **0.15** | Highway 0.15 often → `safetyTxBlocked` |
 | Flat stable | **1 / 1 / 1** | Route 37 OK; felt slow |
 | Responsive v1 | **2.5 / 1.6 / 1.0** | Still understeery on turns |
-| **Current curve authority** | **3.0 / 2.0 / 1.0** | Low/mid bump; highway floor 1° |
+| Curve authority v1 | **3.0 / 2.0 / 1.0** | Route 3c: no EPS; low-speed lag + override |
+| **Current (post-3c)** | **3.5 / 2.2 / 1.0** | + pressed 55 |
 
 Any change to the rate table requires **rebuild + flash panda**.
 
@@ -149,6 +152,7 @@ Alert path: `Steer_Error_1` → `steerFaultPermanent` → `steerUnavailable` / U
 | **37** ~12:40–47 | **No UI fault**; enable ~153 s | Keep anti-chatter + 0→1 meas |
 | Post-37 | Slow tracking | Raise rates to **2.5 / 1.6 / 1.0**, loosen yield |
 | Post 2.5/1.6 | Still slow on turns | **3.0 / 2.0 / 1.0**, delay **0.18**, looser holdoff |
+| Route **3c** (~09:48–10:02) | No sfp/sft; 26% enable in `steerOverride`; low-v err high | **pressed 55**, rates **3.5 / 2.2 / 1.0** |
 
 `can_fault_ringlog` writes snippets under `/data/can_faults/` (e.g. `canfault_*_steerFaultPermanent.log`). Device logs/routes were cleared **2026-08-06 12:50** for clean follow-up tests.
 
