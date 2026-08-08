@@ -2,10 +2,10 @@
   "channel": "main-c3",
   "openpilot": {
     "version": "0.10.1",
-    "release_notes": "sunnypilot_subaru_c3 main-c3 long-term test baseline (AGNOS 12.8, Outback 2023 angle)",
-    "git_commit": "0140668834a0bcf79c9b7104e5f76e72439eaf3e",
+    "release_notes": "sunnypilot_subaru_c3 main-c3 long-term test (AGNOS 12.8, Outback 2023 angle, post-route-3c)",
+    "git_commit": "a85f486db6a675a37c3360257ab8aa3d2118c0a1",
     "git_origin": "https://github.com/nl1031/sunnypilot_subaru_c3",
-    "git_commit_date": "2026-08-08 10:39:48 +0800",
+    "git_commit_date": "2026-08-08 10:49:47 +0800",
     "build_style": "dev"
   }
 }
