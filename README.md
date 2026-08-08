@@ -1,5 +1,43 @@
 ![](https://user-images.githubusercontent.com/47793918/233812617-beab2e71-57b9-479e-8bff-c3931347ca40.png)
 
+## This fork (nl1031 / C3 Subaru)
+
+This repository is a **fork of [sunnypilot](https://github.com/sunnypilot/sunnypilot)** aimed at **comma three (C3 / tici)** development and Subaru lateral experiments. It is **not** the official sunnypilot project and is **not** upstream-supported for Outback 2023 angle control.
+
+| Item | Value |
+|------|--------|
+| **Long-term install branch** | **`main-c3`** |
+| Feature / history branch | `outback-2023-angle-tici` (usually aligned with `main-c3`) |
+| Target hardware | **comma three (C3 / tici)** — channel names ending in **`-c3`** or **`-tici`** |
+| Focus vehicle | **Subaru Outback 2023** (2-camera EyeSight), **Harness D**, stock ACC + experimental **LKAS_ANGLE** lateral |
+| Upstream base | sunnypilot `master-tici` |
+| AGNOS | Must match device `/VERSION` (office / road baseline often **12.8** — see `launch_env.sh`) |
+| Port notes | [`docs/OUTBACK_2023_ANGLE_PORT.md`](docs/OUTBACK_2023_ANGLE_PORT.md) |
+| Supported-cars list | [`docs/CARS.md`](docs/CARS.md) (includes experimental Outback 2023 row) |
+
+**Safety:** Experimental software. Always be ready to take over. After any change to `opendbc` **safety** (`subaru.h`), rebuild and **reflash panda**.
+
+### Install this fork on C3
+
+**Custom Software / installer** (device needs network):
+
+- Repo: `nl1031/sunnypilot_subaru_c3`
+- Branch: **`main-c3`**
+- Prefer HTTPS remotes for submodules (device has no GitHub SSH key during install)
+
+**Dev-machine rsync** (typical office deploy):
+
+```bash
+rsync -avz --exclude '.git/' --exclude '*/.git/' --exclude '__pycache__/' \
+  /path/to/sunnypilot_subaru_c3/ comma:/data/openpilot/
+# If safety rates changed:
+#   ssh comma → stop openpilot → python3 panda/board/flash.py → restart comma
+```
+
+Do **not** install generic non-tici `master` on C3. For full flash / fault-debug steps, see the [angle port doc](docs/OUTBACK_2023_ANGLE_PORT.md).
+
+---
+
 ## 🌞 What is sunnypilot?
 [sunnypilot](https://github.com/sunnyhaibin/sunnypilot) is a fork of comma.ai's openpilot, an open source driver assistance system. sunnypilot offers the user a unique driving experience for over 300+ supported car makes and models with modified behaviors of driving assist engagements. sunnypilot complies with comma.ai's safety rules as accurately as possible.
 

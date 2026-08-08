@@ -2,20 +2,21 @@
 
 ## Goal
 
-Enable **lateral control** for **Subaru Outback 2023** (`LKAS_ANGLE`, **Harness D**) on **comma three (C3 / tici)**, based on sunnypilot `master-tici`. CAN / safety design follows **JacobW** (`openpilot_jacobwaller`); fault-hardening and rate tuning come from on-road iteration (2026-08-04 … 2026-08-06).
+Enable **lateral control** for **Subaru Outback 2023** (`LKAS_ANGLE`, **Harness D**) on **comma three (C3 / tici)**, based on sunnypilot `master-tici`. CAN / safety design follows **JacobW** (`openpilot_jacobwaller`); fault-hardening and rate tuning come from on-road iteration (2026-08-04 … 2026-08-08).
 
 
-## Status (2026-08-07 post route 3c)
+## Status (2026-08-08 long-term test baseline)
 
 | Item | Value |
 |------|--------|
-| **Current tree (dev machine)** | Route-3c tune — `steeringPressed=55`, angle rate **3.5 / 2.2 / 1.0** °/TX, hard hand-yield, `0→1` `cmd=meas` |
-| Branch | `outback-2023-angle-tici` |
-| GitHub (last pushed baseline) | https://github.com/nl1031/sunnypilot_subaru_c3/tree/outback-2023-angle-tici |
-| opendbc | https://github.com/nl1031/opendbc/tree/outback-2023-angle-tici |
-| AGNOS | **12.6** (match office C3; see `launch_env.sh`) |
+| **Current tree** | Route-3c tune — `steeringPressed=55`, angle rate **3.5 / 2.2 / 1.0** °/TX, hard hand-yield, `0→1` `cmd=meas` |
+| **Install / long-term branch** | **`main-c3`** (stable dual-car install target) |
+| Feature / history branch | `outback-2023-angle-tici` (kept aligned with `main-c3`) |
+| GitHub baseline | https://github.com/nl1031/sunnypilot_subaru_c3/tree/main-c3 |
+| opendbc | https://github.com/nl1031/opendbc/tree/main-c3 @ **`43148a3`** |
+| AGNOS | **12.8** (match device `/VERSION`; see `launch_env.sh`) |
 | Tree (dev machine) | `/opt/develop/c3/sunnypilot_subaru_c3` |
-| Working tree | opendbc rate/yield/delay changes may be **local / not yet committed** — verify before relying on remote tip |
+| Working tree | **Pushed** — do not assume device matches remote; compare `build.json` / flash status |
 
 **Road result (device-deployed code):**
 
@@ -28,7 +29,8 @@ Enable **lateral control** for **Subaru Outback 2023** (`LKAS_ANGLE`, **Harness 
 | After 1°/TX flat + sticky yield | Stable but **slow / understeery** in curves |
 | 2.5 / 1.6 / 1.0 + looser yield | Still felt slow on turns |
 | 3.0 / 2.0 / 1.0 + delay 0.18 | Route **3c**: no EPS; **26%** enable in `steerOverride`; low-speed \|des−meas\| lag |
-| **Current (pressed 55 + 3.5 / 2.2 / 1.0)** | Post-3c fix; **reflash panda** |
+| Pressed 55 + **3.5 / 2.2 / 1.0** | Post-3c; less false override; stronger low-speed curves |
+| **2026-08-08 merged `main-c3` road test** | **Good** — cornering better than pre-3c; OK for long-term test (still experimental) |
 
 ---
 
@@ -67,7 +69,7 @@ Enable **lateral control** for **Subaru Outback 2023** (`LKAS_ANGLE`, **Harness 
 | `ES_LKAS_State` when disabled | Jacob: **`LKAS_Dash_State=0`** |
 | LKAS_ANGLE safety init | Enabled **outside** `ALLOW_DEBUG` on this fork (non-debug panda still accepts param bit 8) |
 
-### Key parameters (2026-08-07 post route 3c)
+### Key parameters (2026-08-08 = post route 3c, long-term baseline)
 
 | Parameter | Value |
 |-----------|--------|
@@ -90,7 +92,7 @@ Enable **lateral control** for **Subaru Outback 2023** (`LKAS_ANGLE`, **Harness 
 | Flat stable | **1 / 1 / 1** | Route 37 OK; felt slow |
 | Responsive v1 | **2.5 / 1.6 / 1.0** | Still understeery on turns |
 | Curve authority v1 | **3.0 / 2.0 / 1.0** | Route 3c: no EPS; low-speed lag + override |
-| **Current (post-3c)** | **3.5 / 2.2 / 1.0** | + pressed 55 |
+| **Current (post-3c / main-c3)** | **3.5 / 2.2 / 1.0** | + pressed 55; road-validated 2026-08-08 |
 
 Any change to the rate table requires **rebuild + flash panda**.
 
@@ -153,6 +155,7 @@ Alert path: `Steer_Error_1` → `steerFaultPermanent` → `steerUnavailable` / U
 | Post-37 | Slow tracking | Raise rates to **2.5 / 1.6 / 1.0**, loosen yield |
 | Post 2.5/1.6 | Still slow on turns | **3.0 / 2.0 / 1.0**, delay **0.18**, looser holdoff |
 | Route **3c** (~09:48–10:02) | No sfp/sft; 26% enable in `steerOverride`; low-v err high | **pressed 55**, rates **3.5 / 2.2 / 1.0** |
+| **2026-08-08** merged `main-c3` | Subjective: turns better; usable long-term test | Keep tip; no further rate bump yet |
 
 `can_fault_ringlog` writes snippets under `/data/can_faults/` (e.g. `canfault_*_steerFaultPermanent.log`). Device logs/routes were cleared **2026-08-06 12:50** for clean follow-up tests.
 
@@ -161,6 +164,7 @@ Alert path: `Steer_Error_1` → `steerFaultPermanent` → `steerUnavailable` / U
 - C3 **RTC is unreliable** (often stuck near 1970). Use phone hotspot / office Wi‑Fi for NTP before a drive so route mtimes are useful. Internal `logMonoTime` stays consistent within a drive.
 - Device may show **UnregisteredDevice** in office tests; local rlog/qlog still under `/data/media/0/realdata/`.
 - loggerd on tici can be flaky; swaglog + `can_fault_ringlog` remain primary debug sources.
+- **Branch name:** official sunnypilot wants `*-tici` on C3. This fork treats **`*-c3` (e.g. `main-c3`)** as tici-supported (`system/version.py` `channel_type`) so `Offroad_TiciSupport` does not block onroad.
 
 ---
 
@@ -180,12 +184,12 @@ Do not assume remote HEAD matches the device; compare hashes and flash status.
 
 ## Device install / update (C3)
 
-1. AGNOS **12.6** (or match `launch_env.sh` / device `/VERSION`).  
-2. **Do not** install generic sunnypilot/openpilot **master** (non-tici).  
+1. AGNOS **12.8** (or match `launch_env.sh` / device `/VERSION` — mismatch triggers full AGNOS flash on launch).  
+2. **Do not** install generic sunnypilot/openpilot **master** (non-tici). Use **`main-c3`** (or a `*-tici` / `*-c3` channel).  
 3. Deploy branch to `/data/openpilot`:
 
 ```bash
-# Example rsync from dev machine
+# Example rsync from dev machine (prefer checked-out main-c3)
 rsync -avz --exclude '.git/' --exclude '*/.git/' --exclude '__pycache__/' \
   /opt/develop/c3/sunnypilot_subaru_c3/ comma:/data/openpilot/
 ```
@@ -197,11 +201,11 @@ rsync -avz --exclude '.git/' --exclude '*/.git/' --exclude '__pycache__/' \
 ssh comma 'source /usr/local/venv/bin/activate
   export PYTHONPATH=/data/openpilot
   cd /data/openpilot
-  # stop manager / pandad first
+  # stop manager / pandad first (e.g. sudo systemctl stop comma)
   python3 panda/board/flash.py
   rm -f /data/params/d/CarParams /data/params/d/CarParamsCache \
         /data/params/d/CarParamsPersistent
-  # then launch_openpilot.sh (or reboot)
+  # then: sudo systemctl start comma  (or reboot)
 '
 ```
 
@@ -216,13 +220,15 @@ rsync -avz comma:/data/can_faults/ ./can_faults/
 ### Pull on another PC
 
 ```bash
-git clone --recurse-submodules -b outback-2023-angle-tici \
-  git@github.com:nl1031/sunnypilot_subaru_c3.git
+git clone --recurse-submodules -b main-c3 \
+  https://github.com/nl1031/sunnypilot_subaru_c3.git
 # or update existing:
-git pull origin outback-2023-angle-tici && git submodule update --init --recursive
+git pull origin main-c3 && git submodule update --init --recursive
+# feature history still on: outback-2023-angle-tici (usually same tip as main-c3)
 ```
 
-Remote: keep **`origin`** → `nl1031/sunnypilot_subaru_c3`; optional **`upstream`** → sunnypilot/sunnypilot.
+Remote: keep **`origin`** → `nl1031/sunnypilot_subaru_c3`; optional **`upstream`** → sunnypilot/sunnypilot.  
+Submodule `opendbc_repo` URL should be **HTTPS** (device installer has no GitHub SSH key).
 
 ### Clear device logs (before a clean test)
 
@@ -252,16 +258,18 @@ True collision risk still relies on **stock FCW/AEB** (dash/buzzer may still fir
 
 ## Validation checklist
 
-- [x] Boots on C3 (AGNOS 12.6) with this tree  
+- [x] Boots on C3 (AGNOS **12.8**) with this tree  
 - [x] Car recognized as Outback 2023; not dashcamOnly  
 - [x] ACC engage → lateral works  
 - [x] Route **37**: no permanent EPS latch over multi-minute enable  
 - [x] Unit tests: carcontroller angle path (device venv; 9/9 when last run)  
-- [x] panda flashed for **2.5 / 1.6 / 1.0** rate table  
-- [ ] Road re-test current rates: curve authority vs new EPS faults  
-- [ ] Highway / long multi-condition drive  
-- [ ] Commit + push working-tree opendbc/parent changes if still dirty  
-- [ ] If still slow: try low-speed **3.0°/TX** (reflash panda); if oscillates: drop toward **2.0**  
+- [x] panda flashed for **3.5 / 2.2 / 1.0** rate table (post-3c)  
+- [x] Road re-test post-3c / merged **`main-c3`** (2026-08-08): turns better; OK for long-term test  
+- [x] `main-c3` channel accepted on C3 (`*-c3` → tici `channel_type`; no Offroad_TiciSupport block)  
+- [x] Commit + push baseline (`main-c3` + opendbc `main-c3`)  
+- [ ] Highway / long multi-condition / multi-day durability  
+- [ ] Collect EPS latch rate over longer mileage; pull `/data/can_faults` if any  
+- [ ] If curves still lag: only then bump low-speed rate further (must reflash panda); if oscillates: drop mid/low toward **2.0**
 
 ---
 
