@@ -135,7 +135,10 @@ class BuildMetadata:
 
   @property
   def channel_type(self) -> str:
-    if self.channel.endswith("-tici"):
+    # comma three (tici): official sunnypilot uses *-tici; this fork's stable
+    # install branch is main-c3 (and other *-c3 names). Without this, hardwared
+    # sets Offroad_TiciSupport and blocks onroad.
+    if self.channel.endswith("-tici") or self.channel.endswith("-c3"):
       return "tici"
     elif self.development_channel:
       return "development"
