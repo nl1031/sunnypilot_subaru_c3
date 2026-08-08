@@ -2,10 +2,10 @@
   "channel": "main-c3",
   "openpilot": {
     "version": "0.10.1",
-    "release_notes": "sunnypilot_subaru_c3 main-c3 long-term test @ 007d0b653",
-    "git_commit": "007d0b6533c1392d1555d05d3bdcce153401470e",
+    "release_notes": "sunnypilot_subaru_c3 main-c3 long-term test @ 8675f9bf3",
+    "git_commit": "8675f9bf31efcef20c181c9b89b5dc8a3810bd82",
     "git_origin": "https://github.com/nl1031/sunnypilot_subaru_c3",
-    "git_commit_date": "2026-08-08 11:21:02 +0800",
+    "git_commit_date": "2026-08-08 11:21:30 +0800",
     "build_style": "dev"
   }
 }
