@@ -7,7 +7,7 @@ export OPENBLAS_NUM_THREADS=1
 export VECLIB_MAXIMUM_THREADS=1
 
 if [ -z "$AGNOS_VERSION" ]; then
-  export AGNOS_VERSION="12.6"  # match office C3 flash; was 12.8 on master-tici
+  export AGNOS_VERSION="12.8"  # match current C3 /VERSION (mismatch triggers AGNOS flash on launch)
 fi
 
 export STAGING_ROOT="/data/safe_staging"
