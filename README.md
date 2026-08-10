@@ -4,6 +4,8 @@
 
 This repository is a **fork of [sunnypilot](https://github.com/sunnypilot/sunnypilot)** aimed at **comma three (C3 / tici)** development and Subaru lateral experiments. It is **not** the official sunnypilot project and is **not** upstream-supported for Outback 2023 angle control.
 
+For the Outback 2023, this fork ports the **JacobW Subaru Gen2 angle-control solution** to sunnypilot on C3, including its CAN messaging and panda safety integration. See the port notes below for the final design.
+
 | Item | Value |
 |------|--------|
 | **Long-term install branch** | **`main-c3`** |
