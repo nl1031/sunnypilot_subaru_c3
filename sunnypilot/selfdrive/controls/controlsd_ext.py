@@ -8,6 +8,7 @@ import cereal.messaging as messaging
 from cereal import log, custom
 
 from opendbc.car import structs
+from opendbc.safety import ALTERNATIVE_EXPERIENCE
 from openpilot.common.params import Params
 from openpilot.common.swaglog import cloudlog
 from openpilot.sunnypilot.selfdrive.controls.lib.param_store import ParamStore
@@ -39,7 +40,21 @@ class ControlsExt:
 
     ss_sp = sm['selfdriveStateSP']
     if ss_sp.mads.available:
-      return bool(ss_sp.mads.active)
+      if not ss_sp.mads.active:
+        return False
+      # Independent MADS (ACC not engaged) needs panda ENABLE_MADS. If the
+      # user toggled Mads after CarParams/panda init, altExp stays 0 and
+      # Request=1 is rejected until EPS latches (route 17).
+      cs = sm['carState']
+      if cs.cruiseState.enabled:
+        return True
+      if len(sm['pandaStates']) == 0:
+        return False
+      alt = int(sm['pandaStates'][0].alternativeExperience)
+      if alt & ALTERNATIVE_EXPERIENCE.ENABLE_MADS:
+        return True
+      cloudlog.warning("MADS active but panda alternativeExperience lacks ENABLE_MADS; holding lat off")
+      return False
 
     # MADS not available, use stock state to engage
     return bool(sm['selfdriveState'].active)
