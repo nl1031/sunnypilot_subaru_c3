@@ -11,7 +11,10 @@ For the Outback 2023, this fork ports the **JacobW Subaru Gen2 angle-control sol
 | **Long-term install branch** | **`main-c3`** |
 | Feature / history branch | `outback-2023-angle-tici` (usually aligned with `main-c3`) |
 | Target hardware | **comma three (C3 / tici)** — channel names ending in **`-c3`** or **`-tici`** |
-| Focus vehicle | **Subaru Outback 2023** (2-camera EyeSight), **Harness D**, stock ACC + experimental **LKAS_ANGLE** lateral |
+| Focus vehicle | **Subaru Outback** 2-camera EyeSight + `LKAS_ANGLE` (Harness D): US 2023 refresh and JP/CN 2021 6th-gen; stock ACC |
+| Development repo | [`nl1031/sunnypilot_subaru_c3`](https://github.com/nl1031/sunnypilot_subaru_c3) |
+| Installer mirror | [`nl1031/openpilot`](https://github.com/nl1031/openpilot) (same `main-c3`; comma installer requires the repo name `openpilot`) |
+| Custom Software URL | **`installer.comma.ai/nl1031/main-c3`** |
 | Upstream base | sunnypilot `master-tici` |
 | AGNOS | Must match device `/VERSION` (office / road baseline often **12.8** — see `launch_env.sh`) |
 | Port notes | [`docs/OUTBACK_2023_ANGLE_PORT.md`](docs/OUTBACK_2023_ANGLE_PORT.md) |
@@ -23,9 +26,20 @@ For the Outback 2023, this fork ports the **JacobW Subaru Gen2 angle-control sol
 
 **Custom Software / installer** (device needs network):
 
-- Repo: `nl1031/sunnypilot_subaru_c3`
-- Branch: **`main-c3`**
-- Prefer HTTPS remotes for submodules (device has no GitHub SSH key during install)
+1. Factory-reset or uninstall so the device shows **Custom Software**.
+2. Enter: **`installer.comma.ai/nl1031/main-c3`**
+3. That URL clones **`github.com/nl1031/openpilot`** (comma always uses the repo name `openpilot`). Keep that repo as a mirror of this one on **`main-c3`**. Do not install non-tici `master`.
+4. First boot **compiles on the C3** (`build.py`; no `prebuilt` in this tree). Keep power and network for 15–40+ minutes (comma logo / spinner is expected). Git LFS assets come from the sunnypilot GitLab LFS URL in `.lfsconfig`, not from GitHub.
+
+SSH / `git clone` (repo can be either name):
+
+```bash
+git clone --recurse-submodules -b main-c3 \
+  https://github.com/nl1031/sunnypilot_subaru_c3.git /data/openpilot
+# or: https://github.com/nl1031/openpilot.git
+```
+
+Use **HTTPS** remotes for submodules on a fresh device (no GitHub SSH key yet).
 
 **Dev-machine rsync** (typical office deploy):
 
@@ -36,7 +50,7 @@ rsync -avz --exclude '.git/' --exclude '*/.git/' --exclude '__pycache__/' \
 #   ssh comma → stop openpilot → python3 panda/board/flash.py → restart comma
 ```
 
-Do **not** install generic non-tici `master` on C3. For full flash / fault-debug steps, see the [angle port doc](docs/OUTBACK_2023_ANGLE_PORT.md).
+For full flash / fault-debug steps, see the [angle port doc](docs/OUTBACK_2023_ANGLE_PORT.md).
 
 ---
 
