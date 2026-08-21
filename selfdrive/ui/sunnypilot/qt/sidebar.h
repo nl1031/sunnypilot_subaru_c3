@@ -16,7 +16,6 @@
 class SidebarSP : public Sidebar {
   Q_OBJECT
   Q_PROPERTY(ItemStatus sunnylinkStatus MEMBER sunnylink_status NOTIFY valueChanged);
-  Q_PROPERTY(QString sidebarTemp MEMBER sidebar_temp_str NOTIFY valueChanged);
 
 public slots:
   void updateState(const UIStateSP &s);
@@ -28,8 +27,6 @@ private:
   void drawSidebar(QPainter &p) override;
 
   Params params;
-  QString sidebar_temp = "0";
-  QString sidebar_temp_str = "0";
 
 protected:
   const QColor progress_color = QColor(3, 132, 252);
